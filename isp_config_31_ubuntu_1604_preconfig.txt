@@ -1,0 +1,267 @@
+apt-get update
+apt-get upgrade
+
+reboot
+
+dpkg-reconfigure dash
+Use dash as the default system shell (/bin/sh)? <-- No
+
+service apparmor stop
+update-rc.d -f apparmor remove
+apt-get remove apparmor apparmor-utils
+
+apt-get -y install ntp ntpdate
+
+service sendmail stop; update-rc.d -f sendmail remove
+
+apt-get install postfix postfix-mysql postfix-doc mariadb-client mariadb-server openssl getmail4 rkhunter binutils dovecot-imapd dovecot-pop3d dovecot-mysql dovecot-sieve dovecot-lmtpd sudo
+General type of mail configuration: <-- Internet Site
+System mail name: <-- server1.example.com
+
+nano /etc/postfix/master.cf
+[...]
+submission inet n       -       -       -       -       smtpd
+  -o syslog_name=postfix/submission
+  -o smtpd_tls_security_level=encrypt
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_client_restrictions=permit_sasl_authenticated,reject
+#  -o smtpd_reject_unlisted_recipient=no
+#  -o smtpd_client_restrictions=$mua_client_restrictions
+#  -o smtpd_helo_restrictions=$mua_helo_restrictions
+#  -o smtpd_sender_restrictions=$mua_sender_restrictions
+#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
+#  -o milter_macro_daemon_name=ORIGINATING
+smtps     inet  n       -       -       -       -       smtpd
+  -o syslog_name=postfix/smtps
+  -o smtpd_tls_wrappermode=yes
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_client_restrictions=permit_sasl_authenticated,reject
+#  -o smtpd_reject_unlisted_recipient=no
+#  -o smtpd_client_restrictions=$mua_client_restrictions
+#  -o smtpd_helo_restrictions=$mua_helo_restrictions
+#  -o smtpd_sender_restrictions=$mua_sender_restrictions
+#  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
+#  -o milter_macro_daemon_name=ORIGINATING
+[...]
+
+service postfix restart
+
+nano /etc/mysql/mariadb.conf.d/50-server.cnf
+[...]
+# Instead of skip-networking the default is now to listen only on
+# localhost which is more compatible and is not less secure.
+#bind-address           = 127.0.0.1
+[...]
+
+mysql_secure_installation
+Enter current password for root (enter for none): <-- press enter
+Set root password? [Y/n] <-- y
+New password: <-- Enter the new MariaDB root password here
+Re-enter new password: <-- Repeat the password
+Remove anonymous users? [Y/n] <-- y
+Disallow root login remotely? [Y/n] <-- y
+Reload privilege tables now? [Y/n] <-- y
+
+service mysql restart
+
+netstat -tap | grep mysql
+
+apt-get install amavisd-new spamassassin clamav clamav-daemon zoo unzip bzip2 arj nomarch lzop cabextract apt-listchanges libnet-ldap-perl libauthen-sasl-perl clamav-docs daemon libio-string-perl libio-socket-ssl-perl libnet-ident-perl zip libnet-dns-perl postgrey
+
+service spamassassin stop
+update-rc.d -f spamassassin remove
+
+nano /etc/clamav/clamd.conf
+AllowSupplementaryGroups false --> AllowSupplementaryGroups true
+
+freshclam
+service clamav-daemon start
+
+apt-get install apache2 apache2-doc apache2-utils libapache2-mod-php php7.0 php7.0-common php7.0-gd php7.0-mysql php7.0-imap phpmyadmin php7.0-cli php7.0-cgi libapache2-mod-fcgid apache2-suexec-pristine php-pear php-auth php7.0-mcrypt mcrypt  imagemagick libruby libapache2-mod-python php7.0-curl php7.0-intl php7.0-pspell php7.0-recode php7.0-sqlite3 php7.0-tidy php7.0-xmlrpc php7.0-xsl memcached php-memcache php-imagick php-gettext php7.0-zip php7.0-mbstring
+Web server to reconfigure automatically: <-- apache2
+Configure database for phpmyadmin with dbconfig-common? <-- Yes
+MySQL application password for phpmyadmin: <-- Press enter
+
+a2enmod suexec rewrite ssl actions include cgi
+a2enmod dav_fs dav auth_digest headers
+
+sudo nano /etc/apache2/conf-available/httpoxy.conf
+<IfModule mod_headers.c>
+    RequestHeader unset Proxy early
+</IfModule>
+
+a2enconf httpoxy
+
+service apache2 restart
+
+nano /etc/mime.types
+[...]
+#application/x-ruby                             rb
+[...]
+
+service apache2 restart
+
+apt-get install php7.0-opcache php-apcu
+
+service apache2 restart
+
+apt-get install libapache2-mod-fastcgi php7.0-fpm
+
+a2enmod actions fastcgi alias
+service apache2 restart
+
+apt-get -y install software-properties-common
+apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0x5a16e7281be7a449
+add-apt-repository "deb http://dl.hhvm.com/ubuntu xenial main"
+apt-get update
+apt-get -y install hhvm
+
+apt-get -y install letsencrypt
+
+apt-get install mailman
+Languages to support: <-- en (English)
+Missing site list <-- Ok
+
+newlist mailman
+Enter the email of the person running the list: <-- admin email address, e.g. listadmin@example.com
+Initial mailman password: <-- admin password for the mailman list
+
+Hit enter to notify mailman owner... <-- ENTER
+
+nano /etc/aliases
+[...]
+## mailman mailing list
+mailman:              "|/var/lib/mailman/mail/mailman post mailman"
+mailman-admin:        "|/var/lib/mailman/mail/mailman admin mailman"
+mailman-bounces:      "|/var/lib/mailman/mail/mailman bounces mailman"
+mailman-confirm:      "|/var/lib/mailman/mail/mailman confirm mailman"
+mailman-join:         "|/var/lib/mailman/mail/mailman join mailman"
+mailman-leave:        "|/var/lib/mailman/mail/mailman leave mailman"
+mailman-owner:        "|/var/lib/mailman/mail/mailman owner mailman"
+mailman-request:      "|/var/lib/mailman/mail/mailman request mailman"
+mailman-subscribe:    "|/var/lib/mailman/mail/mailman subscribe mailman"
+mailman-unsubscribe:  "|/var/lib/mailman/mail/mailman unsubscribe mailman"
+
+newaliases
+
+service postfix restart
+
+ln -s /etc/mailman/apache.conf /etc/apache2/conf-available/mailman.conf
+
+service apache2 restart
+service mailman start
+
+apt-get install pure-ftpd-common pure-ftpd-mysql quota quotatool
+
+nano /etc/default/pure-ftpd-common
+[...]
+STANDALONE_OR_INETD=standalone
+[...]
+VIRTUALCHROOT=true
+[...]
+
+echo 1 > /etc/pure-ftpd/conf/TLS
+
+mkdir -p /etc/ssl/private/
+
+openssl req -x509 -nodes -days 7300 -newkey rsa:2048 -keyout /etc/ssl/private/pure-ftpd.pem -out /etc/ssl/private/pure-ftpd.pem
+
+chmod 600 /etc/ssl/private/pure-ftpd.pem
+
+service pure-ftpd-mysql restart
+
+nano /etc/fstab
+errors=remount-ro --> errors=remount-ro,usrjquota=quota.user,grpjquota=quota.group,jqfmt=vfsv0
+
+mount -o remount /
+
+quotacheck -avugm
+quotaon -avug
+
+apt-get install bind9 dnsutils haveged
+
+apt-get install vlogger webalizer awstats geoip-database libclass-dbi-mysql-perl
+
+nano /etc/cron.d/awstats
+comment out everything
+
+apt-get install build-essential autoconf automake1.11 libtool flex bison debhelper binutils
+
+cd /tmp
+wget http://olivier.sessink.nl/jailkit/jailkit-2.19.tar.gz
+tar xvfz jailkit-2.19.tar.gz
+cd jailkit-2.19
+./debian/rules binary
+
+cd ..
+dpkg -i jailkit_2.19-1_*.deb
+rm -rf jailkit-2.19*
+
+apt-get install fail2ban
+
+nano /etc/fail2ban/jail.local
+[pureftpd]
+enabled  = true
+port     = ftp
+filter   = pureftpd
+logpath  = /var/log/syslog
+maxretry = 3
+
+[dovecot-pop3imap]
+enabled = true
+filter = dovecot-pop3imap
+action = iptables-multiport[name=dovecot-pop3imap, port="pop3,pop3s,imap,imaps", protocol=tcp]
+logpath = /var/log/mail.log
+maxretry = 5
+
+[postfix-sasl]
+enabled  = true
+port     = smtp
+filter   = postfix-sasl
+logpath  = /var/log/mail.log
+maxretry = 3
+
+nano /etc/fail2ban/filter.d/pureftpd.conf
+[Definition]
+failregex = .*pure-ftpd: \(.*@<HOST>\) \[WARNING\] Authentication failed for user.*
+ignoreregex =
+
+nano /etc/fail2ban/filter.d/dovecot-pop3imap.conf
+[Definition]
+failregex = (?: pop3-login|imap-login): .*(?:Authentication failure|Aborted login \(auth failed|Aborted login \(tried to use disabled|Disconnected \(auth failed|Aborted login \(\d+ authentication attempts).*rip=(?P<host>\S*),.*
+ignoreregex =
+
+echo "ignoreregex =" >> /etc/fail2ban/filter.d/postfix-sasl.conf
+
+service fail2ban restart
+
+apt-get install ufw
+
+apt-get install roundcube roundcube-core roundcube-mysql roundcube-plugins roundcube-plugins-extra javascript-common libjs-jquery-mousewheel php-net-sieve tinymce
+
+Configure database for roundcube with dbconfig-common? <-- Yes
+MySQL application password for roundcube: <-- Press enter
+
+nano /etc/apache2/conf-enabled/roundcube.conf
+# Those aliases do not work properly with several hosts on your apache server
+# Uncomment them to use it or adapt them to your configuration
+Alias /roundcube /var/lib/roundcube
+[...]
+<Directory /var/lib/roundcube>
+AddType application/x-httpd-php .php
+[...]
+
+service apache2 restart
+
+nano /etc/roundcube/config.inc.php
+$config['default_host'] = 'localhost';
+
+cd /tmp
+wget -O ispconfig.tar.gz https://git.ispconfig.org/ispconfig/ispconfig3/repository/archive.tar.gz?ref=stable-3.1
+tar xfz ispconfig.tar.gz
+cd ispconfig3*/install/
+
+php -q install.php
+
+FIX FOR MySQL Login for roundcube
+echo "update user set plugin='' where User='root';" | mysql -root -p mysql
